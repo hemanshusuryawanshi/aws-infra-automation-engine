@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS IaC Automation Control Panel</title>
+    <style>
+        :root {
+            --bg-base: #0f172a;
+            --surface: #1e293b;
+            --surface-accent: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --aws-orange: #ff9900;
+            --success: #10b981;
+            --border: #475569;
+            --font-stack: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--font-stack); background-color: var(--bg-base); color: var(--text-main); padding: 40px 20px; -webkit-font-smoothing: antialiased; }
+
+        .container { max-width: 1100px; margin: 0 auto; }
+        
+        /* --- HEADER --- */
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 40px; }
+        .title-area h1 { font-size: 24px; font-weight: 800; }
+        .title-area p { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+        .badge { background: rgba(255, 153, 0, 0.15); color: var(--aws-orange); border: 1px solid var(--aws-orange); padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+
+        /* --- DASHBOARD GRID --- */
+        .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
+
+        /* --- VISUAL CANVAS --- */
+        .canvas-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 30px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); }
+        .canvas-title { font-size: 16px; font-weight: 700; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+        
+        .architecture-flow { display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.6); border-radius: 8px; padding: 40px 20px; position: relative; min-height: 220px; }
+        
+        .node { background: var(--surface-accent); border: 2px solid var(--border); border-radius: 8px; padding: 15px; text-align: center; width: 140px; position: relative; z-index: 2; transition: all 0.3s ease; }
+        .node.active { border-color: var(--success); box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
+        .node h4 { font-size: 14px; margin-bottom: 6px; }
+        .node span { font-size: 11px; color: var(--text-muted); display: block; word-break: break-all; }
+        .node .status-dot { width: 8px; height: 8px; background: var(--border); border-radius: 50%; margin: 8px auto 0 auto; transition: background 0.3s; }
+        .node.active .status-dot { background: var(--success); }
+
+        .connector-line { flex: 1; height: 2px; background: var(--border); margin: 0 -5px; position: relative; z-index: 1; transition: background 0.3s; }
+        .connector-line.active { background: var(--success); }
+
+        /* --- TELEMETRY / ACTIONS --- */
+        .sidebar { display: flex; flex-direction: column; gap: 30px; }
+        .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 25px; }
+        .panel h3 { font-size: 16px; font-weight: 700; margin-bottom: 20px; text-transform: uppercase; color: var(--text-muted); }
+        
+        .btn { background: var(--aws-orange); color: #000; border: none; width: 100%; padding: 14px; border-radius: 6px; font-weight: 700; font-size: 14px; cursor: pointer; transition: background 0.2s; text-transform: uppercase; }
+        .btn:hover { background: #e68a00; }
+        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text-main); margin-top: 10px; }
+        .btn-secondary:hover { background: rgba(255,255,255,0.05); }
+
+        .terminal { background: #000; border-radius: 6px; padding: 15px; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #a3e635; min-height: 180px; max-height: 250px; overflow-y: auto; line-height: 1.5; border: 1px solid #334155; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="title-area">
+                <h1>Automated Cloud Provisioning Engine</h1>
+                <p>Infrastructure Lifecycle Control Portal & Visual Topology Map</p>
+            </div>
+            <div class="badge">Boto3 / IaC Stack</div>
+        </header>
+
+        <div class="grid">
+            <div class="canvas-card">
+                <div class="canvas-title">Live Dynamic Topology Map</div>
+                <div class="architecture-flow">
+                    <div class="node" id="node-iam">
+                        <h4>IAM Boundary</h4>
+                        <span id="label-iam">EC2_S3_Access_Role</span>
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="connector-line" id="line-1"></div>
+                    <div class="node" id="node-ec2">
+                        <h4>EC2 Instance</h4>
+                        <span id="label-ec2">t3.micro Instance</span>
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="connector-line" id="line-2"></div>
+                    <div class="node" id="node-s3">
+                        <h4>S3 Bucket</h4>
+                        <span id="label-s3">hs-data-bucket-uuid</span>
+                        <div class="status-dot"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="panel">
+                    <h3>Lifecycle Management</h3>
+                    <button class="btn" onclick="simulateProvisioning()">Simulate Provisioning</button>
+                    <button class="btn btn-secondary" onclick="simulateTeardown()">Simulate Teardown</button>
+                </div>
+                <div class="panel">
+                    <h3>Live System Telemetry</h3>
+                    <div class="terminal" id="log-output">> Engine standby. Ready for lifecycle invocation...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const logs = document.getElementById('log-output');
+        
+        function appendLog(text, color = '#a3e635') {
+            logs.innerHTML += `<br><span style="color: ${color}">$ ${text}</span>`;
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function simulateProvisioning() {
+            logs.innerHTML = '> Invoking Core Provisioning Pipeline...';
+            
+            setTimeout(() => {
+                appendLog('Deploying Global Storage Instance...', '#ff9900');
+                document.getElementById('node-s3').classList.add('active');
+                document.getElementById('label-s3').innerText = 'hs-automated-data-bucket-d6665df7';
+            }, 1000);
+
+            setTimeout(() => {
+                appendLog('Establishing IAM Security Profile...', '#ff9900');
+                document.getElementById('node-iam').classList.add('active');
+                document.getElementById('line-2').classList.add('active');
+            }, 2500);
+
+            setTimeout(() => {
+                appendLog('Querying SSM Parameter Store for optimal AMI...', '#94a3b8');
+                appendLog('Resolved Image ID: ami-02b1e663aa8e2a28a', '#94a3b8');
+                appendLog('Orchestrating Elastic Compute Cloud (EC2)...', '#ff9900');
+                document.getElementById('node-ec2').classList.add('active');
+                document.getElementById('line-1').classList.add('active');
+                document.getElementById('label-ec2').innerText = 'i-0abc123def4567ghi';
+            }, 4000);
+
+            setTimeout(() => {
+                appendLog('🎯 ORCHESTRATION PIPELINE COMPLETE', '#10b981');
+            }, 5000);
+        }
+
+        function simulateTeardown() {
+            logs.innerHTML = '> Initializing Full Landscape Destruction...';
+            
+            setTimeout(() => {
+                appendLog('Terminating operational compute instances...', '#ef4444');
+                document.getElementById('node-ec2').classList.remove('active');
+                document.getElementById('line-1').classList.remove('active');
+                document.getElementById('label-ec2').innerText = 't3.micro Instance';
+            }, 1000);
+
+            setTimeout(() => {
+                appendLog('Purging object storage structures cleanly...', '#ef4444');
+                document.getElementById('node-s3').classList.remove('active');
+                document.getElementById('line-2').classList.remove('active');
+                document.getElementById('label-s3').innerText = 'hs-data-bucket-uuid';
+            }, 2500);
+
+            setTimeout(() => {
+                appendLog('Revoking IAM permissions & policies...', '#ef4444');
+                document.getElementById('node-iam').classList.remove('active');
+            }, 4000);
+
+            setTimeout(() => {
+                appendLog('🎯 TEARDOWN COMPLETE. AWS ENVIRONMENT IS CLEAN.', '#10b981');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
